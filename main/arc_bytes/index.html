@@ -4,8 +4,8 @@
 <img src="https://img.shields.io/badge/status-alpha-orange" alt="arc-bytes is considered alpha" />
 <a href="https://crates.io/crates/arc-bytes"><img src="https://img.shields.io/crates/v/arc-bytes.svg" alt="crate version" /></a>
 <a href="https://github.com/khonsulabs/arc-bytes/actions?query=workflow:Tests"><img src="https://img.shields.io/github/workflow/status/khonsulabs/arc-bytes/Tests/main" alt="Live Build Status" /></a>
-<a href="https://arc-bytes.bonsaidb.io/coverage/"><img src="https://khonsulabs.github.io/arc-bytes/coverage/badge.svg" alt="HTML Coverage Report for main branch" /></a>
-<a href="https://arc-bytes.bonsaidb.io/main/arc-bytes/"><img src="https://img.shields.io/badge/docs-main-informational" alt="Documentation for main branch" /></a></p>
+<a href="https://khonsulabs.github.io/arc-bytes/coverage/"><img src="https://khonsulabs.github.io/arc-bytes/coverage/badge.svg" alt="HTML Coverage Report for main branch" /></a>
+<a href="https://khonsulabs.github.io/arc-bytes/main/arc_bytes/"><img src="https://img.shields.io/badge/docs-main-informational" alt="Documentation for main branch" /></a></p>
 <p>A reference-counted byte buffer.</p>
 <p>ArcBytes is a type that is useful when parsing a buffer of bytes and breaking it into smaller pieces without extra allocations or extending the lifetime of the underlying buffer. This is done with no unsafe code by leveraging <code>std::sync::Arc</code>. When the final reference of the buffer goes away, the underlying bytes will be released.</p>
 <p>This type also implements <code>std::io::Read</code> and <code>std::iter::Iterator</code> for easier integration with existing code.</p>
