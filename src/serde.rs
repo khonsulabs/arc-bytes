@@ -86,3 +86,31 @@ impl<'de> Visitor<'de> for BufferVisitor {
         Ok(ArcBytes::from(v))
     }
 }
+
+#[test]
+fn tests() {
+    // deserialize_seq
+    let u8_sequence_bytes = pot::to_vec(&vec![1_u8, 2, 3]).unwrap();
+    let buffer = pot::from_slice::<ArcBytes<'_>>(&u8_sequence_bytes).unwrap();
+    assert_eq!(buffer, &[1_u8, 2, 3]);
+
+    // deserialize_borrowed_bytes
+    let actual_bytes = pot::to_vec(&ArcBytes::from(vec![1_u8, 2, 3])).unwrap();
+    let buffer = pot::from_slice::<ArcBytes<'_>>(&actual_bytes).unwrap();
+    assert_eq!(buffer, &[1_u8, 2, 3]);
+
+    // deserialize_byte_buf
+    let json = serde_json::to_string(&ArcBytes::from(vec![1_u8, 2, 3])).unwrap();
+    let buffer = serde_json::from_str::<ArcBytes<'_>>(&json).unwrap();
+    assert_eq!(buffer, &[1_u8, 2, 3]);
+
+    // deserialize_str
+    let str_bytes = pot::to_vec(&"hello").unwrap();
+    let buffer = pot::from_slice::<ArcBytes<'_>>(&str_bytes).unwrap();
+    assert_eq!(buffer, b"hello");
+
+    // deserialize_string
+    let json = serde_json::to_string(&"hello").unwrap();
+    let buffer = serde_json::from_str::<ArcBytes<'_>>(&json).unwrap();
+    assert_eq!(buffer, b"hello");
+}
