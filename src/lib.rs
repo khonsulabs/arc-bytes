@@ -32,9 +32,28 @@ use std::{
 /// instance. Instead, the position is tracked within the original source buffer.
 #[derive(Clone)]
 pub struct ArcBytes<'a> {
-    buffer: Option<Arc<Cow<'a, [u8]>>>,
+    buffer: Bytes<'a>,
     end: usize,
     position: usize,
+}
+
+#[derive(Clone)]
+enum Bytes<'a> {
+    None,
+    Borrowed(&'a [u8]),
+    Owned(Arc<Vec<u8>>),
+}
+
+impl<'a> Deref for Bytes<'a> {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Bytes::None => b"",
+            Bytes::Borrowed(bytes) => bytes,
+            Bytes::Owned(vec) => vec,
+        }
+    }
 }
 
 impl<'a> Default for ArcBytes<'a> {
@@ -75,8 +94,6 @@ fn debug_fmt() {
     );
 }
 
-// TODO add string conversions
-
 impl<'a> Eq for ArcBytes<'a> {}
 
 impl<'a, 'b> PartialEq<ArcBytes<'b>> for ArcBytes<'a> {
@@ -99,8 +116,8 @@ impl<'a, 'b, const N: usize> PartialEq<&'b [u8; N]> for ArcBytes<'a> {
 
 impl<'a> Ord for ArcBytes<'a> {
     fn cmp(&self, other: &Self) -> Ordering {
-        match (self.buffer.as_ref(), other.buffer.as_ref()) {
-            (Some(a), Some(b))
+        match (&self.buffer, &other.buffer) {
+            (Bytes::Owned(a), Bytes::Owned(b))
                 if Arc::ptr_eq(a, b)
                     && self.position == other.position
                     && self.end == other.end =>
@@ -121,7 +138,7 @@ fn ord_tests() {
     let buffer = ArcBytes::borrowed(b"eq");
     let mut buffer_clone = buffer.clone();
     assert_eq!(buffer_clone, buffer);
-    buffer_clone.next();
+    buffer_clone.read_bytes(1).unwrap();
     assert_ne!(buffer_clone, buffer);
     assert!(buffer_clone > buffer);
 }
@@ -133,25 +150,25 @@ impl<'a, 'b> PartialOrd<ArcBytes<'b>> for ArcBytes<'a> {
 }
 
 impl<'a> ArcBytes<'a> {
-    /// Returns an empty buffer.
+    /// Returns an empty instance.
     ///
     /// ```rust
-    /// # use arc_buffer::ArcBytes;
+    /// # use arc_bytes::ArcBytes;
     /// assert!(ArcBytes::new().is_empty());
     /// ```
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            buffer: None,
+            buffer: Bytes::None,
             end: 0,
             position: 0,
         }
     }
 
-    /// Returns a buffer with the owned bytes.
+    /// Returns an instance with the owned bytes.
     ///
     /// ```rust
-    /// # use arc_buffer::ArcBytes;
+    /// # use arc_bytes::ArcBytes;
     /// assert_eq!(ArcBytes::owned(b"hello".to_vec()), b"hello");
     /// ```
     #[must_use]
@@ -159,10 +176,10 @@ impl<'a> ArcBytes<'a> {
         Self::from(Cow::Owned(buffer))
     }
 
-    /// Returns a borrowed buffer.
+    /// Returns a borrowed instance.
     ///
     /// ```rust
-    /// # use arc_buffer::ArcBytes;
+    /// # use arc_bytes::ArcBytes;
     /// assert_eq!(ArcBytes::borrowed(b"hello"), b"hello");
     /// ```
     #[must_use]
@@ -170,11 +187,12 @@ impl<'a> ArcBytes<'a> {
         Self::from(Cow::Borrowed(buffer))
     }
 
-    /// Converts this buffer into its slice and returns a static-lifetimed
-    /// instance.
+    /// Converts this instance into a static lifetime. This method will allocate
+    /// a new buffer, and it will be sized to match the current result of
+    /// [`Self::as_slice()`].
     ///
     /// ```rust
-    /// # use arc_buffer::ArcBytes;
+    /// # use arc_bytes::ArcBytes;
     /// assert_eq!(ArcBytes::borrowed(b"hello").to_owned(), b"hello");
     /// ```
     #[must_use]
@@ -182,26 +200,26 @@ impl<'a> ArcBytes<'a> {
         ArcBytes::from(self.as_slice().to_vec())
     }
 
-    /// Returns this buffer as a slice of `u8`s.
+    /// Returns this instance as a slice of `u8`s.
     ///
     /// ```rust
-    /// # use arc_buffer::ArcBytes;
+    /// # use arc_bytes::ArcBytes;
     /// assert_eq!(ArcBytes::borrowed(b"hello").as_slice(), b"hello");
     /// ```
     #[must_use]
     pub fn as_slice(&self) -> &[u8] {
-        if let Some(buffer) = &self.buffer {
-            &buffer[self.position..self.end]
+        if self.position < self.end {
+            &self.buffer[self.position..self.end]
         } else {
-            &[]
+            b""
         }
     }
 
-    /// Returns a slice of this buffer as its own `ArcBytes` instance. This
-    /// performs no allocations, and instead references the original buffer.
+    /// Returns a slice of these bytes as its own `ArcBytes` instance. This
+    /// performs no allocations, and instead references the original bytes.
     ///
     /// ```rust
-    /// # use arc_buffer::ArcBytes;
+    /// # use arc_bytes::ArcBytes;
     /// let original = ArcBytes::borrowed(b"abc");
     /// let b = original.slice(1..=1);
     /// assert_eq!(b, b"b");
@@ -226,20 +244,20 @@ impl<'a> ArcBytes<'a> {
         }
     }
 
-    /// Reads `count` bytes from the front of the buffer, returning a buffer
-    /// that shares the same underlying buffer. `self` is advanced inside of the
-    /// buffer to point.
+    /// Reads `count` bytes from the front of the bytes, returning a new
+    /// instance that shares the same underlying bytes. `self` is advanced
+    /// inside of the buffer to point.
     ///
     /// ```rust
-    /// # use arc_buffer::ArcBytes;
+    /// # use arc_bytes::ArcBytes;
     /// let mut buffer = ArcBytes::borrowed(b"abc");
-    /// let ab = buffer.read_buffer(2).unwrap();
+    /// let ab = buffer.read_bytes(2).unwrap();
     /// assert_eq!(ab, b"ab");
-    /// let c = buffer.read_buffer(1).unwrap();
+    /// let c = buffer.read_bytes(1).unwrap();
     /// assert_eq!(c, b"c");
     /// assert_eq!(buffer, b"");
     /// ```
-    pub fn read_buffer(&mut self, count: usize) -> Result<Self, std::io::Error> {
+    pub fn read_bytes(&mut self, count: usize) -> Result<Self, std::io::Error> {
         let start = self.position;
         let end = self.position + count;
         if end > self.end {
@@ -254,13 +272,13 @@ impl<'a> ArcBytes<'a> {
         }
     }
 
-    /// Splits the buffer into two parts at `offset`. This method will not panic
+    /// Splits the bytes into two parts at `offset`. This method will not panic
     /// of `offset` is too large, instead it will be treated as if `offset` is
-    /// `self.len()` -- the first buffer will contain all of the bytes, and the
-    /// second buffer will be empty.
+    /// `self.len()` -- the first instance will contain all of the bytes, and
+    /// the second instance will be empty.
     ///
     /// ```rust
-    /// # use arc_buffer::ArcBytes;
+    /// # use arc_bytes::ArcBytes;
     /// let buffer = ArcBytes::borrowed(b"abc");
     /// let (ab, c) = buffer.split_at(2);
     /// assert_eq!(ab, b"ab");
@@ -285,6 +303,15 @@ impl<'a> ArcBytes<'a> {
             },
         )
     }
+
+    /// Returns an iterator for the contained bytes.
+    #[must_use]
+    pub const fn iter(&self) -> Iter<'_> {
+        Iter {
+            buffer: Cow::Borrowed(self),
+            offset: 0,
+        }
+    }
 }
 
 #[test]
@@ -304,14 +331,14 @@ fn slice_tests() {
 
 impl<'a> From<Cow<'a, [u8]>> for ArcBytes<'a> {
     fn from(buffer: Cow<'a, [u8]>) -> Self {
+        let buffer = match buffer {
+            Cow::Borrowed(borrowed) => Bytes::Borrowed(borrowed),
+            Cow::Owned(vec) => Bytes::Owned(Arc::new(vec)),
+        };
         let end = buffer.len();
         Self {
             end,
-            buffer: if end > 0 {
-                Some(Arc::new(buffer))
-            } else {
-                None
-            },
+            buffer: if end > 0 { buffer } else { Bytes::None },
             position: 0,
         }
     }
@@ -323,7 +350,7 @@ fn from_cow_tests() {
     assert_eq!(has_bytes, b"a");
 
     let empty = ArcBytes::from(Cow::Borrowed(&b""[..]));
-    assert!(empty.buffer.is_none());
+    assert!(matches!(empty.buffer, Bytes::None));
 }
 
 impl<'a> From<Vec<u8>> for ArcBytes<'a> {
@@ -381,25 +408,21 @@ impl<'a> Deref for ArcBytes<'a> {
 
 impl<'a> Read for ArcBytes<'a> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        if let Some(buffer) = &self.buffer {
-            let end = buffer.len().min(self.position + buf.len());
-            let bytes_read = buf.len().min(end - self.position);
+        let end = self.buffer.len().min(self.position + buf.len());
+        let bytes_read = buf.len().min(end.saturating_sub(self.position));
 
-            if bytes_read == 0 {
-                return Err(io::Error::from(ErrorKind::UnexpectedEof));
-            }
-
-            buf[..bytes_read].copy_from_slice(&buffer[self.position..end]);
-            self.position = end;
-
-            if self.position == self.end {
-                self.buffer = None;
-            }
-
-            Ok(bytes_read)
-        } else {
-            Err(io::Error::from(ErrorKind::UnexpectedEof))
+        if bytes_read == 0 {
+            return Err(io::Error::from(ErrorKind::UnexpectedEof));
         }
+
+        buf[..bytes_read].copy_from_slice(&self.buffer[self.position..end]);
+        self.position = end;
+
+        if self.position == self.end {
+            self.buffer = Bytes::None;
+        }
+
+        Ok(bytes_read)
     }
 }
 
@@ -415,23 +438,43 @@ fn read_tests() {
     assert!(buffer.is_empty());
 }
 
-impl<'a> Iterator for ArcBytes<'a> {
+impl<'a> IntoIterator for ArcBytes<'a> {
+    type Item = u8;
+
+    type IntoIter = Iter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter {
+            buffer: Cow::Owned(self),
+            offset: 0,
+        }
+    }
+}
+
+/// An iterator for an [`ArcBytes`].
+pub struct Iter<'a> {
+    buffer: Cow<'a, ArcBytes<'a>>,
+    offset: usize,
+}
+
+impl<'a> Iterator for Iter<'a> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.position < self.end {
-            let byte = self[0];
-            self.position += 1;
+        if self.offset < self.buffer.len() {
+            let byte = self.buffer[self.offset];
+            self.offset += 1;
             Some(byte)
         } else {
             None
         }
     }
 }
+
 #[test]
 fn iterator_tests() {
-    assert_eq!(ArcBytes::new().count(), 0);
-    let iterated = ArcBytes::from(vec![0, 1, 2]).collect::<Vec<_>>();
+    assert_eq!(ArcBytes::new().iter().count(), 0);
+    let iterated = ArcBytes::from(vec![0, 1, 2]).iter().collect::<Vec<_>>();
     assert_eq!(iterated, vec![0, 1, 2]);
 }
 
