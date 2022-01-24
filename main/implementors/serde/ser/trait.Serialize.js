@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["arc_bytes"] = [{"text":"impl&lt;'a&gt; <a class=\"trait\" href=\"https://docs.rs/serde/1.0.135/serde/ser/trait.Serialize.html\" title=\"trait serde::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"arc_bytes/struct.ArcBytes.html\" title=\"struct arc_bytes::ArcBytes\">ArcBytes</a>&lt;'a&gt;","synthetic":false,"types":["arc_bytes::ArcBytes"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

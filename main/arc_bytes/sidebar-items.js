@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ArcBytes","An immutable buffer of bytes that can be cloned, sliced, and read into multiple parts using a single refernce to the underlying buffer."]]});
