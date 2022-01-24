@@ -1,0 +1,20 @@
+[package]
+name = "arc-bytes"
+version = "0.1.0"
+edition = "2021"
+description = "A reference-counted byte buffer."
+repository = "https://github.com/khonsulabs/arc-bytes"
+license = "MIT OR Apache-2.0"
+keywords = ["serde", "bytes"]
+categories = ["data-structures"]
+readme = "./README.md"
+
+[features]
+default = ["serde"]
+
+[dependencies]
+serde = { version = "1", optional = true }
+thiserror = "1"
+
+[workspace]
+members = ["xtask"]
