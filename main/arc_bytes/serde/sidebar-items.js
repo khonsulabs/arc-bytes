@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Bytes","A `Vec<u8>` wrapper that supports serializing efficiently in Serde."]]});

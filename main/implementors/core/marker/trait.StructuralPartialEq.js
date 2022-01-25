@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["arc_bytes"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.58.1/core/marker/trait.StructuralPartialEq.html\" title=\"trait core::marker::StructuralPartialEq\">StructuralPartialEq</a> for <a class=\"struct\" href=\"arc_bytes/serde/struct.Bytes.html\" title=\"struct arc_bytes::serde::Bytes\">Bytes</a>","synthetic":false,"types":["arc_bytes::serde::Bytes"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["ArcBytes","An immutable buffer of bytes that can be cloned, sliced, and read into multiple parts using a single refernce to the underlying buffer."],["Iter","An iterator for an [`ArcBytes`]."]]});
+initSidebarItems({"mod":[["serde","Efficient serialization implementation, ensuring bytes are written as a buffer of bytes not as a sequence."]],"struct":[["ArcBytes","An immutable buffer of bytes that can be cloned, sliced, and read into multiple parts using a single refernce to the underlying buffer."],["Iter","An iterator for an [`ArcBytes`]."]]});
