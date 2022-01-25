@@ -1,4 +1,8 @@
-use std::fmt;
+use std::{
+    borrow::Cow,
+    fmt,
+    ops::{Deref, DerefMut},
+};
 
 use serde::{
     de::{Error, SeqAccess, Visitor},
@@ -16,19 +20,89 @@ impl<'a> Serialize for ArcBytes<'a> {
     }
 }
 
-impl<'de> Deserialize<'de> for ArcBytes<'de> {
+impl<'a, 'de: 'a> Deserialize<'de> for ArcBytes<'a> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        deserializer.deserialize_bytes(BufferVisitor)
+        deserializer
+            .deserialize_bytes(BufferVisitor)
+            .map(Self::from)
+    }
+}
+
+/// A `Vec<u8>` wrapper that supports serializing efficiently in Serde.
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+pub struct Bytes(pub Vec<u8>);
+
+impl Bytes {
+    /// Returns the underlying Vec.
+    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[must_use]
+    pub fn into_vec(self) -> Vec<u8> {
+        self.0
+    }
+}
+
+impl From<Vec<u8>> for Bytes {
+    fn from(buffer: Vec<u8>) -> Self {
+        Self(buffer)
+    }
+}
+
+impl<'a> From<&'a [u8]> for Bytes {
+    fn from(buffer: &'a [u8]) -> Self {
+        Self(buffer.to_vec())
+    }
+}
+
+impl<'a> From<ArcBytes<'a>> for Bytes {
+    fn from(buffer: ArcBytes<'a>) -> Self {
+        Self(buffer.into_vec())
+    }
+}
+
+impl Deref for Bytes {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Bytes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Serialize for Bytes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(self.0.as_slice())
+    }
+}
+
+impl<'de> Deserialize<'de> for Bytes {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer
+            .deserialize_byte_buf(BufferVisitor)
+            .map(|bytes| match bytes {
+                Cow::Borrowed(borrowed) => Self(borrowed.to_vec()),
+                Cow::Owned(vec) => Self(vec),
+            })
     }
 }
 
 struct BufferVisitor;
 
 impl<'de> Visitor<'de> for BufferVisitor {
-    type Value = ArcBytes<'de>;
+    type Value = Cow<'de, [u8]>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("bytes")
@@ -48,42 +122,49 @@ impl<'de> Visitor<'de> for BufferVisitor {
             bytes.push(b);
         }
 
-        Ok(ArcBytes::from(bytes))
+        Ok(Cow::Owned(bytes))
     }
 
     fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
     where
         E: Error,
     {
-        Ok(ArcBytes::from(v.to_vec()))
+        Ok(Cow::Owned(v.to_vec()))
     }
 
     fn visit_borrowed_bytes<E>(self, v: &'de [u8]) -> Result<Self::Value, E>
     where
         E: Error,
     {
-        Ok(ArcBytes::from(v))
+        Ok(Cow::Borrowed(v))
     }
 
     fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
     where
         E: Error,
     {
-        Ok(ArcBytes::from(v))
+        Ok(Cow::Owned(v))
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: Error,
     {
-        Ok(ArcBytes::from(v.as_bytes().to_vec()))
+        Ok(Cow::Owned(v.as_bytes().to_vec()))
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Borrowed(v.as_bytes()))
     }
 
     fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
     where
         E: Error,
     {
-        Ok(ArcBytes::from(v))
+        Ok(Cow::Owned(v.into_bytes()))
     }
 }
 

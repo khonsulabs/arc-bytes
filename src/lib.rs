@@ -37,6 +37,12 @@ pub struct ArcBytes<'a> {
     position: usize,
 }
 
+impl<'a> std::hash::Hash for ArcBytes<'a> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_slice().hash(state);
+    }
+}
+
 #[derive(Clone)]
 enum Bytes<'a> {
     None,
@@ -105,6 +111,24 @@ impl<'a, 'b> PartialEq<ArcBytes<'b>> for ArcBytes<'a> {
 impl<'a> PartialEq<[u8]> for ArcBytes<'a> {
     fn eq(&self, other: &[u8]) -> bool {
         self.as_slice().cmp(other) == Ordering::Equal
+    }
+}
+
+impl<'a, 'b> PartialEq<&'b [u8]> for ArcBytes<'a> {
+    fn eq(&self, other: &&'b [u8]) -> bool {
+        self.as_slice().cmp(other) == Ordering::Equal
+    }
+}
+
+impl<'a> PartialOrd<[u8]> for ArcBytes<'a> {
+    fn partial_cmp(&self, other: &[u8]) -> Option<Ordering> {
+        self.as_slice().partial_cmp(other)
+    }
+}
+
+impl<'b, 'a> PartialOrd<&'b [u8]> for ArcBytes<'a> {
+    fn partial_cmp(&self, other: &&'b [u8]) -> Option<Ordering> {
+        self.as_slice().partial_cmp(other)
     }
 }
 
@@ -187,17 +211,53 @@ impl<'a> ArcBytes<'a> {
         Self::from(Cow::Borrowed(buffer))
     }
 
-    /// Converts this instance into a static lifetime. This method will allocate
-    /// a new buffer, and it will be sized to match the current result of
-    /// [`Self::as_slice()`].
+    /// Converts this instance into a static lifetime, re-allocating if
+    /// necessary.
     ///
     /// ```rust
     /// # use arc_bytes::ArcBytes;
     /// assert_eq!(ArcBytes::borrowed(b"hello").to_owned(), b"hello");
     /// ```
     #[must_use]
+    pub fn into_owned(self) -> ArcBytes<'static> {
+        let buffer = match self.buffer {
+            Bytes::Owned(owned) => {
+                return ArcBytes {
+                    buffer: Bytes::Owned(owned),
+                    end: self.end,
+                    position: self.position,
+                }
+            }
+            other => other,
+        };
+        ArcBytes::from(buffer[self.position..self.end].to_vec())
+    }
+
+    /// Converts a clone of this instance into a static lifetime.
+    #[must_use]
     pub fn to_owned(&self) -> ArcBytes<'static> {
-        ArcBytes::from(self.as_slice().to_vec())
+        self.clone().into_owned()
+    }
+
+    /// Converts this instance into a `Vec<u8>`, attempting to do so without
+    /// extra copying if possible.
+    #[must_use]
+    pub fn into_vec(self) -> Vec<u8> {
+        let buffer = match self.buffer {
+            Bytes::Owned(owned) => {
+                let owned = if self.position == 0 && self.end == owned.len() {
+                    match Arc::try_unwrap(owned) {
+                        Ok(vec) => return vec,
+                        Err(arc) => arc,
+                    }
+                } else {
+                    owned
+                };
+                Bytes::Owned(owned)
+            }
+            other => other,
+        };
+        buffer[self.position..self.end].to_vec()
     }
 
     /// Returns this instance as a slice of `u8`s.
@@ -478,5 +538,7 @@ fn iterator_tests() {
     assert_eq!(iterated, vec![0, 1, 2]);
 }
 
+/// Efficient serialization implementation, ensuring bytes are written as a
+/// buffer of bytes not as a sequence.
 #[cfg(feature = "serde")]
-mod serde;
+pub mod serde;
