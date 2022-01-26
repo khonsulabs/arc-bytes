@@ -3076,7 +3076,7 @@
                 
             </div>
             <div class="column has-background-danger-light p-0">
-                <pre class="has-background-danger-light py-0 px-2">    pub fn into_owned(self) -&gt; OwnedBytes {</pre>
+                <pre class="has-background-danger-light py-0 px-2">    pub fn into_owned(self) -&gt; ArcBytes&lt;&#x27;static&gt; {</pre>
             </div>
         </div><div class="columns p-0 m-0">
             <div
@@ -3115,7 +3115,7 @@
                 
             </div>
             <div class="column has-background-danger-light p-0">
-                <pre class="has-background-danger-light py-0 px-2">                return OwnedBytes(ArcBytes {</pre>
+                <pre class="has-background-danger-light py-0 px-2">                return ArcBytes {</pre>
             </div>
         </div><div class="columns p-0 m-0">
             <div
@@ -3167,7 +3167,7 @@
                 
             </div>
             <div class="column has-background-danger-light p-0">
-                <pre class="has-background-danger-light py-0 px-2">                })</pre>
+                <pre class="has-background-danger-light py-0 px-2">                }</pre>
             </div>
         </div><div class="columns p-0 m-0">
             <div
@@ -3219,7 +3219,7 @@
                 
             </div>
             <div class="column has-background-danger-light p-0">
-                <pre class="has-background-danger-light py-0 px-2">        OwnedBytes(ArcBytes::from(buffer[self.position..self.end].to_vec()))</pre>
+                <pre class="has-background-danger-light py-0 px-2">        ArcBytes::from(buffer[self.position..self.end].to_vec())</pre>
             </div>
         </div><div class="columns p-0 m-0">
             <div
@@ -3284,7 +3284,7 @@
                 
             </div>
             <div class="column has-background-danger-light p-0">
-                <pre class="has-background-danger-light py-0 px-2">    pub fn to_owned(&amp;self) -&gt; OwnedBytes {</pre>
+                <pre class="has-background-danger-light py-0 px-2">    pub fn to_owned(&amp;self) -&gt; ArcBytes&lt;&#x27;static&gt; {</pre>
             </div>
         </div><div class="columns p-0 m-0">
             <div
@@ -7639,7 +7639,7 @@
                 
             </div>
             <div class="column has-background-danger-light p-0">
-                <pre class="has-background-danger-light py-0 px-2">        bytes.into_owned()</pre>
+                <pre class="has-background-danger-light py-0 px-2">        Self(bytes.into_owned())</pre>
             </div>
         </div><div class="columns p-0 m-0">
             <div
@@ -8437,7 +8437,7 @@
         </div></div>
         <footer class="footer">
             <div class="content has-text-centered">
-                <p class="heading">Date: 2022-01-26 22:26</p>
+                <p class="heading">Date: 2022-01-26 22:30</p>
             </div>
         </footer>
     </body>
