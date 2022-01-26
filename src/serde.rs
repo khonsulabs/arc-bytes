@@ -9,7 +9,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::ArcBytes;
+use crate::{ArcBytes, OwnedBytes};
 
 impl<'a> Serialize for ArcBytes<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -28,6 +28,29 @@ impl<'a, 'de: 'a> Deserialize<'de> for ArcBytes<'a> {
         deserializer
             .deserialize_bytes(BufferVisitor)
             .map(Self::from)
+    }
+}
+
+impl Serialize for OwnedBytes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(self.0.as_slice())
+    }
+}
+
+impl<'de> Deserialize<'de> for OwnedBytes {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer
+            .deserialize_byte_buf(BufferVisitor)
+            .map(|bytes| match bytes {
+                Cow::Borrowed(borrowed) => Self(ArcBytes::owned(borrowed.to_vec())),
+                Cow::Owned(vec) => Self(ArcBytes::owned(vec)),
+            })
     }
 }
 

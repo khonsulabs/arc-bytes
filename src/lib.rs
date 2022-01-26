@@ -21,7 +21,7 @@ use std::{
     cmp::Ordering,
     fmt::{Debug, Write},
     io::{self, ErrorKind, Read},
-    ops::{Bound, Deref, RangeBounds},
+    ops::{Bound, Deref, DerefMut, RangeBounds},
     sync::Arc,
 };
 
@@ -114,6 +114,12 @@ impl<'a> PartialEq<[u8]> for ArcBytes<'a> {
     }
 }
 
+impl<'a, const SIZE: usize> PartialEq<[u8; SIZE]> for ArcBytes<'a> {
+    fn eq(&self, other: &[u8; SIZE]) -> bool {
+        self.as_slice().cmp(other) == Ordering::Equal
+    }
+}
+
 impl<'a, 'b> PartialEq<&'b [u8]> for ArcBytes<'a> {
     fn eq(&self, other: &&'b [u8]) -> bool {
         self.as_slice().cmp(other) == Ordering::Equal
@@ -123,6 +129,12 @@ impl<'a, 'b> PartialEq<&'b [u8]> for ArcBytes<'a> {
 impl<'a> PartialOrd<[u8]> for ArcBytes<'a> {
     fn partial_cmp(&self, other: &[u8]) -> Option<Ordering> {
         self.as_slice().partial_cmp(other)
+    }
+}
+
+impl<'a, 'b, const SIZE: usize> PartialOrd<&'b [u8; SIZE]> for ArcBytes<'a> {
+    fn partial_cmp(&self, other: &&'b [u8; SIZE]) -> Option<Ordering> {
+        self.as_slice().partial_cmp(&other[..])
     }
 }
 
@@ -219,23 +231,23 @@ impl<'a> ArcBytes<'a> {
     /// assert_eq!(ArcBytes::borrowed(b"hello").to_owned(), b"hello");
     /// ```
     #[must_use]
-    pub fn into_owned(self) -> ArcBytes<'static> {
+    pub fn into_owned(self) -> OwnedBytes {
         let buffer = match self.buffer {
             Bytes::Owned(owned) => {
-                return ArcBytes {
+                return OwnedBytes(ArcBytes {
                     buffer: Bytes::Owned(owned),
                     end: self.end,
                     position: self.position,
-                }
+                })
             }
             other => other,
         };
-        ArcBytes::from(buffer[self.position..self.end].to_vec())
+        OwnedBytes(ArcBytes::from(buffer[self.position..self.end].to_vec()))
     }
 
     /// Converts a clone of this instance into a static lifetime.
     #[must_use]
-    pub fn to_owned(&self) -> ArcBytes<'static> {
+    pub fn to_owned(&self) -> OwnedBytes {
         self.clone().into_owned()
     }
 
@@ -466,6 +478,12 @@ impl<'a> Deref for ArcBytes<'a> {
     }
 }
 
+impl<'a> std::borrow::Borrow<[u8]> for ArcBytes<'a> {
+    fn borrow(&self) -> &[u8] {
+        &**self
+    }
+}
+
 impl<'a> Read for ArcBytes<'a> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let end = self.buffer.len().min(self.position + buf.len());
@@ -536,6 +554,90 @@ fn iterator_tests() {
     assert_eq!(ArcBytes::new().iter().count(), 0);
     let iterated = ArcBytes::from(vec![0, 1, 2]).iter().collect::<Vec<_>>();
     assert_eq!(iterated, vec![0, 1, 2]);
+}
+
+/// An instance of [`ArcBytes`] that is not borrowing its underlying data.
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+pub struct OwnedBytes(pub ArcBytes<'static>);
+
+impl Deref for OwnedBytes {
+    type Target = ArcBytes<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for OwnedBytes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<Vec<u8>> for OwnedBytes {
+    fn from(vec: Vec<u8>) -> Self {
+        Self(ArcBytes::from(vec))
+    }
+}
+
+impl<'a> From<ArcBytes<'a>> for OwnedBytes {
+    fn from(bytes: ArcBytes<'a>) -> Self {
+        bytes.into_owned()
+    }
+}
+
+impl<'a> From<&'a [u8]> for OwnedBytes {
+    fn from(bytes: &'a [u8]) -> Self {
+        Self(ArcBytes::owned(bytes.to_vec()))
+    }
+}
+
+impl<'a, const SIZE: usize> From<&'a [u8; SIZE]> for OwnedBytes {
+    fn from(bytes: &'a [u8; SIZE]) -> Self {
+        Self(ArcBytes::owned(bytes.to_vec()))
+    }
+}
+
+impl std::borrow::Borrow<[u8]> for OwnedBytes {
+    fn borrow(&self) -> &[u8] {
+        &**self
+    }
+}
+
+impl PartialEq<[u8]> for OwnedBytes {
+    fn eq(&self, other: &[u8]) -> bool {
+        self.0 == other
+    }
+}
+
+impl PartialOrd<[u8]> for OwnedBytes {
+    fn partial_cmp(&self, other: &[u8]) -> Option<Ordering> {
+        self.0.partial_cmp(other)
+    }
+}
+
+impl<'a> PartialEq<&'a [u8]> for OwnedBytes {
+    fn eq(&self, other: &&'a [u8]) -> bool {
+        self.0 == *other
+    }
+}
+
+impl<'a> PartialOrd<&'a [u8]> for OwnedBytes {
+    fn partial_cmp(&self, other: &&'a [u8]) -> Option<Ordering> {
+        self.0.partial_cmp(other)
+    }
+}
+
+impl<'a, const SIZE: usize> PartialEq<&'a [u8; SIZE]> for OwnedBytes {
+    fn eq(&self, other: &&'a [u8; SIZE]) -> bool {
+        self.0 == *other
+    }
+}
+
+impl<'a, const SIZE: usize> PartialOrd<&'a [u8; SIZE]> for OwnedBytes {
+    fn partial_cmp(&self, other: &&'a [u8; SIZE]) -> Option<Ordering> {
+        self.0.partial_cmp(other)
+    }
 }
 
 /// Efficient serialization implementation, ensuring bytes are written as a
