@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Bytes","A `Vec<u8>` wrapper that supports serializing efficiently in Serde."]]});
+initSidebarItems({"struct":[["Bytes","A `Vec<u8>` wrapper that supports serializing efficiently in Serde."],["CowBytes","A `Cow<'a, [u8]>` wrapper that supports serializing efficiently in Serde."]]});
