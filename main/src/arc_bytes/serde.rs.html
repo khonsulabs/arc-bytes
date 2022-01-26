@@ -315,13 +315,6 @@
 <span id="314">314</span>
 <span id="315">315</span>
 <span id="316">316</span>
-<span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">borrow::Cow</span>,
     <span class="ident">fmt</span>,
@@ -532,7 +525,6 @@
     <span class="kw">where</span>
         <span class="ident">V</span>: <span class="ident">SeqAccess</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
     {
-        <span class="macro">println!</span>(<span class="string">&quot;Sequence&quot;</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">len</span>) <span class="op">=</span> <span class="ident">visitor</span>.<span class="ident">size_hint</span>() {
             <span class="ident">Vec::with_capacity</span>(<span class="ident">len</span>)
         } <span class="kw">else</span> {
@@ -550,7 +542,6 @@
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Error</span>,
     {
-        <span class="macro">println!</span>(<span class="string">&quot;bytes&quot;</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">Cow::Owned</span>(<span class="ident">v</span>.<span class="ident">to_vec</span>()))
     }
 
@@ -558,7 +549,6 @@
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Error</span>,
     {
-        <span class="macro">println!</span>(<span class="string">&quot;borrowed&quot;</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">Cow::Borrowed</span>(<span class="ident">v</span>))
     }
 
@@ -566,7 +556,6 @@
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Error</span>,
     {
-        <span class="macro">println!</span>(<span class="string">&quot;byte_buf&quot;</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">Cow::Owned</span>(<span class="ident">v</span>))
     }
 
@@ -574,7 +563,6 @@
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Error</span>,
     {
-        <span class="macro">println!</span>(<span class="string">&quot;str&quot;</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">Cow::Owned</span>(<span class="ident">v</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>()))
     }
 
@@ -582,7 +570,6 @@
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Error</span>,
     {
-        <span class="macro">println!</span>(<span class="string">&quot;borrowed str&quot;</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">Cow::Borrowed</span>(<span class="ident">v</span>.<span class="ident">as_bytes</span>()))
     }
 
@@ -590,7 +577,6 @@
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Error</span>,
     {
-        <span class="macro">println!</span>(<span class="string">&quot;string&quot;</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">Cow::Owned</span>(<span class="ident">v</span>.<span class="ident">into_bytes</span>()))
     }
 }
