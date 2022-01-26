@@ -231,23 +231,23 @@ impl<'a> ArcBytes<'a> {
     /// assert_eq!(ArcBytes::borrowed(b"hello").to_owned(), b"hello");
     /// ```
     #[must_use]
-    pub fn into_owned(self) -> OwnedBytes {
+    pub fn into_owned(self) -> ArcBytes<'static> {
         let buffer = match self.buffer {
             Bytes::Owned(owned) => {
-                return OwnedBytes(ArcBytes {
+                return ArcBytes {
                     buffer: Bytes::Owned(owned),
                     end: self.end,
                     position: self.position,
-                })
+                }
             }
             other => other,
         };
-        OwnedBytes(ArcBytes::from(buffer[self.position..self.end].to_vec()))
+        ArcBytes::from(buffer[self.position..self.end].to_vec())
     }
 
     /// Converts a clone of this instance into a static lifetime.
     #[must_use]
-    pub fn to_owned(&self) -> OwnedBytes {
+    pub fn to_owned(&self) -> ArcBytes<'static> {
         self.clone().into_owned()
     }
 
@@ -582,7 +582,7 @@ impl From<Vec<u8>> for OwnedBytes {
 
 impl<'a> From<ArcBytes<'a>> for OwnedBytes {
     fn from(bytes: ArcBytes<'a>) -> Self {
-        bytes.into_owned()
+        Self(bytes.into_owned())
     }
 }
 
