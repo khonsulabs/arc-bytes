@@ -208,7 +208,6 @@ impl<'de> Visitor<'de> for BufferVisitor {
     where
         V: SeqAccess<'de>,
     {
-        println!("Sequence");
         let mut bytes = if let Some(len) = visitor.size_hint() {
             Vec::with_capacity(len)
         } else {
@@ -226,7 +225,6 @@ impl<'de> Visitor<'de> for BufferVisitor {
     where
         E: Error,
     {
-        println!("bytes");
         Ok(Cow::Owned(v.to_vec()))
     }
 
@@ -234,7 +232,6 @@ impl<'de> Visitor<'de> for BufferVisitor {
     where
         E: Error,
     {
-        println!("borrowed");
         Ok(Cow::Borrowed(v))
     }
 
@@ -242,7 +239,6 @@ impl<'de> Visitor<'de> for BufferVisitor {
     where
         E: Error,
     {
-        println!("byte_buf");
         Ok(Cow::Owned(v))
     }
 
@@ -250,7 +246,6 @@ impl<'de> Visitor<'de> for BufferVisitor {
     where
         E: Error,
     {
-        println!("str");
         Ok(Cow::Owned(v.as_bytes().to_vec()))
     }
 
@@ -258,7 +253,6 @@ impl<'de> Visitor<'de> for BufferVisitor {
     where
         E: Error,
     {
-        println!("borrowed str");
         Ok(Cow::Borrowed(v.as_bytes()))
     }
 
@@ -266,7 +260,6 @@ impl<'de> Visitor<'de> for BufferVisitor {
     where
         E: Error,
     {
-        println!("string");
         Ok(Cow::Owned(v.into_bytes()))
     }
 }

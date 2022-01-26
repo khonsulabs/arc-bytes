@@ -1,6 +1,6 @@
 [package]
 name = "arc-bytes"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 description = "A reference-counted byte buffer."
 repository = "https://github.com/khonsulabs/arc-bytes"
