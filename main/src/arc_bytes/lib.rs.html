@@ -878,23 +878,23 @@
     <span class="doccomment">/// assert_eq!(ArcBytes::borrowed(b&quot;hello&quot;).to_owned(), b&quot;hello&quot;);</span>
     <span class="doccomment">/// ```</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) -&gt; <span class="ident">OwnedBytes</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) -&gt; <span class="ident">ArcBytes</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">buffer</span> {
             <span class="ident">Bytes::Owned</span>(<span class="ident">owned</span>) =&gt; {
-                <span class="kw">return</span> <span class="ident">OwnedBytes</span>(<span class="ident">ArcBytes</span> {
+                <span class="kw">return</span> <span class="ident">ArcBytes</span> {
                     <span class="ident">buffer</span>: <span class="ident">Bytes::Owned</span>(<span class="ident">owned</span>),
                     <span class="ident">end</span>: <span class="self">self</span>.<span class="ident">end</span>,
                     <span class="ident">position</span>: <span class="self">self</span>.<span class="ident">position</span>,
-                })
+                }
             }
             <span class="ident">other</span> =&gt; <span class="ident">other</span>,
         };
-        <span class="ident">OwnedBytes</span>(<span class="ident">ArcBytes::from</span>(<span class="ident">buffer</span>[<span class="self">self</span>.<span class="ident">position</span>..<span class="self">self</span>.<span class="ident">end</span>].<span class="ident">to_vec</span>()))
+        <span class="ident">ArcBytes::from</span>(<span class="ident">buffer</span>[<span class="self">self</span>.<span class="ident">position</span>..<span class="self">self</span>.<span class="ident">end</span>].<span class="ident">to_vec</span>())
     }
 
     <span class="doccomment">/// Converts a clone of this instance into a static lifetime.</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_owned</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">OwnedBytes</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_owned</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ArcBytes</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">clone</span>().<span class="ident">into_owned</span>()
     }
 
@@ -1229,7 +1229,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ArcBytes</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">OwnedBytes</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">bytes</span>: <span class="ident">ArcBytes</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">bytes</span>.<span class="ident">into_owned</span>()
+        <span class="self">Self</span>(<span class="ident">bytes</span>.<span class="ident">into_owned</span>())
     }
 }
 
