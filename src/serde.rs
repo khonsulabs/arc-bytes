@@ -200,4 +200,9 @@ fn tests() {
     let buffer = serde_json::from_str::<ArcBytes<'_>>(r#""hello\u0020world""#).unwrap();
     assert_eq!(buffer, b"hello world");
     assert!(matches!(buffer.buffer, Bytes::Owned(_)));
+
+    // Deserialize `Bytes`
+    let actual_bytes = pot::to_vec(&ArcBytes::from(vec![1_u8, 2, 3])).unwrap();
+    let buffer = pot::from_slice::<self::Bytes>(&actual_bytes).unwrap();
+    assert_eq!(buffer.as_slice(), &[1_u8, 2, 3]);
 }
