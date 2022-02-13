@@ -9,7 +9,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::{ArcBytes, OwnedBytes};
+use crate::{print_bytes, ArcBytes, OwnedBytes};
 
 impl<'a> Serialize for ArcBytes<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -55,7 +55,7 @@ impl<'de> Deserialize<'de> for OwnedBytes {
 }
 
 /// A `Vec<u8>` wrapper that supports serializing efficiently in Serde.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct Bytes(pub Vec<u8>);
 
 impl Bytes {
@@ -64,6 +64,15 @@ impl Bytes {
     #[must_use]
     pub fn into_vec(self) -> Vec<u8> {
         self.0
+    }
+}
+
+impl<'a> std::fmt::Debug for Bytes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let slice = self.as_slice();
+        write!(f, "Bytes {{ length: {}, bytes: [", slice.len())?;
+        print_bytes(slice, f)?;
+        f.write_str("] }")
     }
 }
 
@@ -129,7 +138,7 @@ impl<'de> Deserialize<'de> for Bytes {
 }
 
 /// A `Cow<'a, [u8]>` wrapper that supports serializing efficiently in Serde.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct CowBytes<'a>(pub Cow<'a, [u8]>);
 
 impl<'a> CowBytes<'a> {
@@ -148,6 +157,24 @@ impl<'a> CowBytes<'a> {
             Cow::Borrowed(bytes) => bytes.to_vec(),
             Cow::Owned(vec) => vec,
         }
+    }
+}
+
+impl<'a> std::fmt::Debug for CowBytes<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let slice = &self[..];
+        write!(
+            f,
+            "CowBytes {{ length: {}, bytes: {}[",
+            slice.len(),
+            if matches!(self.0, Cow::Borrowed(_)) {
+                "&"
+            } else {
+                ""
+            }
+        )?;
+        print_bytes(slice, f)?;
+        f.write_str("] }")
     }
 }
 

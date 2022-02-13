@@ -25,6 +25,31 @@ use std::{
     sync::Arc,
 };
 
+/// Formats the bytes contained in `slice` into the provided `writer`. This
+/// function groups the printed output in chukns of 8 hexadecimal characters,
+/// and inserts spaces between each group.
+///
+/// This function powers the [`Debug`] trait implementations within the crate.
+///
+/// ```rust
+/// let mut printed = String::default();
+/// arc_bytes::print_bytes(b"\x01\x23\x45\x67\x89", &mut printed).unwrap();
+/// assert_eq!(printed, "01234567 89");
+/// ```
+pub fn print_bytes<W: Write>(mut slice: &[u8], writer: &mut W) -> std::fmt::Result {
+    while !slice.is_empty() {
+        let (chunk, remaining) = slice.split_at(4.min(slice.len()));
+        slice = remaining;
+        for byte in chunk {
+            write!(writer, "{:02x}", byte)?;
+        }
+        if !slice.is_empty() {
+            writer.write_char(' ')?;
+        }
+    }
+    Ok(())
+}
+
 /// An immutable buffer of bytes that can be cloned, sliced, and read into
 /// multiple parts using a single refernce to the underlying buffer.
 ///
@@ -75,18 +100,9 @@ fn default_is_new() {
 
 impl<'a> Debug for ArcBytes<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut slice = self.as_slice();
+        let slice = self.as_slice();
         write!(f, "ArcBytes {{ length: {}, bytes: [", slice.len())?;
-        while !slice.is_empty() {
-            let (chunk, remaining) = slice.split_at(4.min(slice.len()));
-            slice = remaining;
-            for byte in chunk {
-                write!(f, "{:02x}", byte)?;
-            }
-            if !slice.is_empty() {
-                f.write_char(' ')?;
-            }
-        }
+        print_bytes(slice, f)?;
         f.write_str("] }")
     }
 }
