@@ -312,6 +312,7 @@ impl<'a> ArcBytes<'a> {
     /// let b = original.slice(1..=1);
     /// assert_eq!(b, b"b");
     /// ```
+    #[must_use]
     pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> Self {
         let start = self.position.saturating_add(match range.start_bound() {
             Bound::Included(&start) => start,
@@ -352,11 +353,13 @@ impl<'a> ArcBytes<'a> {
             Err(std::io::Error::from(ErrorKind::UnexpectedEof))
         } else {
             self.position = end;
-            Ok(Self {
+            let result = Self {
                 buffer: self.buffer.clone(),
                 end,
                 position: start,
-            })
+            };
+            self.deallocate_if_empty();
+            Ok(result)
         }
     }
 
@@ -398,6 +401,14 @@ impl<'a> ArcBytes<'a> {
         Iter {
             buffer: Cow::Borrowed(self),
             offset: 0,
+        }
+    }
+
+    fn deallocate_if_empty(&mut self) {
+        if self.position == self.end {
+            self.buffer = Bytes::None;
+            self.position = 0;
+            self.end = 0;
         }
     }
 }
@@ -512,9 +523,7 @@ impl<'a> Read for ArcBytes<'a> {
         buf[..bytes_read].copy_from_slice(&self.buffer[self.position..end]);
         self.position = end;
 
-        if self.position == self.end {
-            self.buffer = Bytes::None;
-        }
+        self.deallocate_if_empty();
 
         Ok(bytes_read)
     }
@@ -570,6 +579,15 @@ fn iterator_tests() {
     assert_eq!(ArcBytes::new().iter().count(), 0);
     let iterated = ArcBytes::from(vec![0, 1, 2]).iter().collect::<Vec<_>>();
     assert_eq!(iterated, vec![0, 1, 2]);
+}
+
+#[test]
+fn read_zero_bytes_at_end() {
+    let mut bytes = ArcBytes::from(&[0, 1, 2, 3]);
+    bytes.read_bytes(4).unwrap();
+    let empty = bytes.read_bytes(0).unwrap();
+    let empty = empty.into_owned();
+    assert!(empty.is_empty());
 }
 
 /// An instance of [`ArcBytes`] that is not borrowing its underlying data.
