@@ -67,6 +67,8 @@ impl Bytes {
     }
 }
 
+impl_std_cmp!(Bytes);
+
 impl<'a> std::fmt::Debug for Bytes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let slice = self.as_slice();
@@ -84,6 +86,12 @@ impl From<Vec<u8>> for Bytes {
 
 impl<'a> From<&'a [u8]> for Bytes {
     fn from(buffer: &'a [u8]) -> Self {
+        Self(buffer.to_vec())
+    }
+}
+
+impl<const N: usize> From<[u8; N]> for Bytes {
+    fn from(buffer: [u8; N]) -> Self {
         Self(buffer.to_vec())
     }
 }
@@ -141,6 +149,8 @@ impl<'de> Deserialize<'de> for Bytes {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct CowBytes<'a>(pub Cow<'a, [u8]>);
 
+impl_std_cmp!(CowBytes<'a>);
+
 impl<'a> CowBytes<'a> {
     /// Returns the underlying Cow.
     #[allow(clippy::missing_const_for_fn)] // false positive
@@ -157,6 +167,12 @@ impl<'a> CowBytes<'a> {
             Cow::Borrowed(bytes) => bytes.to_vec(),
             Cow::Owned(vec) => vec,
         }
+    }
+
+    /// Returns a slice of the contained data.
+    #[must_use]
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0
     }
 }
 
@@ -207,6 +223,18 @@ impl<'a> From<Vec<u8>> for CowBytes<'a> {
 
 impl<'a> From<&'a [u8]> for CowBytes<'a> {
     fn from(buffer: &'a [u8]) -> Self {
+        Self(Cow::Borrowed(buffer))
+    }
+}
+
+impl<'a, const N: usize> From<[u8; N]> for CowBytes<'a> {
+    fn from(buffer: [u8; N]) -> Self {
+        Self::from(buffer.to_vec())
+    }
+}
+
+impl<'a, const N: usize> From<&'a [u8; N]> for CowBytes<'a> {
+    fn from(buffer: &'a [u8; N]) -> Self {
         Self(Cow::Borrowed(buffer))
     }
 }

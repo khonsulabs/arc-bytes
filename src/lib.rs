@@ -97,6 +97,12 @@ impl<'a> Default for ArcBytes<'a> {
     }
 }
 
+impl<'a> AsRef<[u8]> for Bytes<'a> {
+    fn as_ref(&self) -> &[u8] {
+        &**self
+    }
+}
+
 #[test]
 fn default_is_new() {
     assert_eq!(ArcBytes::new(), ArcBytes::default());
@@ -128,47 +134,53 @@ impl<'a, 'b> PartialEq<ArcBytes<'b>> for ArcBytes<'a> {
     }
 }
 
-impl<'a> PartialEq<[u8]> for ArcBytes<'a> {
-    fn eq(&self, other: &[u8]) -> bool {
-        self.as_slice().cmp(other) == Ordering::Equal
-    }
+macro_rules! impl_std_cmp {
+    ($self:ty) => {
+        impl<'a> PartialEq<[u8]> for $self {
+            fn eq(&self, other: &[u8]) -> bool {
+                self.as_slice().cmp(other) == std::cmp::Ordering::Equal
+            }
+        }
+
+        impl<'a, const SIZE: usize> PartialEq<[u8; SIZE]> for $self {
+            fn eq(&self, other: &[u8; SIZE]) -> bool {
+                self.as_slice().cmp(other) == std::cmp::Ordering::Equal
+            }
+        }
+
+        impl<'a, 'b> PartialEq<&'b [u8]> for $self {
+            fn eq(&self, other: &&'b [u8]) -> bool {
+                self.as_slice().cmp(other) == std::cmp::Ordering::Equal
+            }
+        }
+
+        impl<'a> PartialOrd<[u8]> for $self {
+            fn partial_cmp(&self, other: &[u8]) -> Option<std::cmp::Ordering> {
+                self.as_slice().partial_cmp(other)
+            }
+        }
+
+        impl<'a, 'b, const SIZE: usize> PartialOrd<&'b [u8; SIZE]> for $self {
+            fn partial_cmp(&self, other: &&'b [u8; SIZE]) -> Option<std::cmp::Ordering> {
+                self.as_slice().partial_cmp(&other[..])
+            }
+        }
+
+        impl<'b, 'a> PartialOrd<&'b [u8]> for $self {
+            fn partial_cmp(&self, other: &&'b [u8]) -> Option<std::cmp::Ordering> {
+                self.as_slice().partial_cmp(other)
+            }
+        }
+
+        impl<'a, 'b, const N: usize> PartialEq<&'b [u8; N]> for $self {
+            fn eq(&self, other: &&'b [u8; N]) -> bool {
+                self.as_slice().cmp(*other) == std::cmp::Ordering::Equal
+            }
+        }
+    };
 }
 
-impl<'a, const SIZE: usize> PartialEq<[u8; SIZE]> for ArcBytes<'a> {
-    fn eq(&self, other: &[u8; SIZE]) -> bool {
-        self.as_slice().cmp(other) == Ordering::Equal
-    }
-}
-
-impl<'a, 'b> PartialEq<&'b [u8]> for ArcBytes<'a> {
-    fn eq(&self, other: &&'b [u8]) -> bool {
-        self.as_slice().cmp(other) == Ordering::Equal
-    }
-}
-
-impl<'a> PartialOrd<[u8]> for ArcBytes<'a> {
-    fn partial_cmp(&self, other: &[u8]) -> Option<Ordering> {
-        self.as_slice().partial_cmp(other)
-    }
-}
-
-impl<'a, 'b, const SIZE: usize> PartialOrd<&'b [u8; SIZE]> for ArcBytes<'a> {
-    fn partial_cmp(&self, other: &&'b [u8; SIZE]) -> Option<Ordering> {
-        self.as_slice().partial_cmp(&other[..])
-    }
-}
-
-impl<'b, 'a> PartialOrd<&'b [u8]> for ArcBytes<'a> {
-    fn partial_cmp(&self, other: &&'b [u8]) -> Option<Ordering> {
-        self.as_slice().partial_cmp(other)
-    }
-}
-
-impl<'a, 'b, const N: usize> PartialEq<&'b [u8; N]> for ArcBytes<'a> {
-    fn eq(&self, other: &&'b [u8; N]) -> bool {
-        self.as_slice().cmp(*other) == Ordering::Equal
-    }
-}
+impl_std_cmp!(ArcBytes<'a>);
 
 impl<'a> Ord for ArcBytes<'a> {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -515,6 +527,12 @@ impl<'a> std::borrow::Borrow<[u8]> for ArcBytes<'a> {
     }
 }
 
+impl<'a> AsRef<[u8]> for ArcBytes<'a> {
+    fn as_ref(&self) -> &[u8] {
+        &**self
+    }
+}
+
 impl<'a> Read for ArcBytes<'a> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let end = self.buffer.len().min(self.position + buf.len());
@@ -575,6 +593,11 @@ impl<'a> Iterator for Iter<'a> {
         } else {
             None
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let length = self.buffer.len() - self.offset;
+        (length, Some(length))
     }
 }
 
