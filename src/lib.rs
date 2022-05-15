@@ -37,17 +37,21 @@ use std::{
 /// assert_eq!(printed, "01234567 89");
 /// ```
 pub fn print_bytes<W: Write>(mut slice: &[u8], writer: &mut W) -> std::fmt::Result {
-    while !slice.is_empty() {
-        let (chunk, remaining) = slice.split_at(4.min(slice.len()));
-        slice = remaining;
-        for byte in chunk {
-            write!(writer, "{:02x}", byte)?;
+    if let Ok(as_str) = std::str::from_utf8(slice) {
+        write!(writer, "{as_str:?}")
+    } else {
+        while !slice.is_empty() {
+            let (chunk, remaining) = slice.split_at(4.min(slice.len()));
+            slice = remaining;
+            for byte in chunk {
+                write!(writer, "{:02x}", byte)?;
+            }
+            if !slice.is_empty() {
+                writer.write_char(' ')?;
+            }
         }
-        if !slice.is_empty() {
-            writer.write_char(' ')?;
-        }
+        Ok(())
     }
-    Ok(())
 }
 
 /// An immutable buffer of bytes that can be cloned, sliced, and read into
